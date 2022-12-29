@@ -2,6 +2,7 @@ import argparse
 import itertools
 import math
 import os
+import random
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from pathlib import Path
@@ -187,6 +188,8 @@ def parse_args():
     parser.add_argument(
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
+    parser.add_argument("--hflip", action="store_true", help="Apply horizontal flip data augmentation.")
+    parser.add_argument("--Drop_out", type=float, default=0.01, help="Randomly Drops a caption from an image")
     parser.add_argument("--adam_beta1", type=float, default=0.9, help="The beta1 parameter for the Adam optimizer.")
     parser.add_argument("--adam_beta2", type=float, default=0.999, help="The beta2 parameter for the Adam optimizer.")
     parser.add_argument("--adam_weight_decay", type=float, default=1e-2, help="Weight decay to use.")
@@ -335,18 +338,22 @@ class DreamBoothDataset(Dataset):
         class_data_root=None,
         class_prompt=None,
         size=512,
+        conditional_dropout=0.01,
         center_crop=False,
+        hflip=False
+
     ):
         self.size = size
         self.center_crop = center_crop
         self.tokenizer = tokenizer
         self.image_captions_filename = None
-
+        self.conditional_dropout = conditional_dropout
         self.instance_data_root = Path(instance_data_root)
         if not self.instance_data_root.exists():
             raise ValueError("Instance images root doesn't exists.")
-
+        
         self.instance_images_path = list(Path(instance_data_root).iterdir())
+        random.shuffle(self.instance_images_path)
         self.num_instance_images = len(self.instance_images_path)
         self.instance_prompt = instance_prompt
         self._length = self.num_instance_images
@@ -366,13 +373,13 @@ class DreamBoothDataset(Dataset):
 
         self.image_transforms = transforms.Compose(
             [
+                transforms.RandomHorizontalFlip(0.1 * hflip),
                 transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5], [0.5]),
             ]
         )
-
     def __len__(self):
         return self._length
 
@@ -406,7 +413,10 @@ class DreamBoothDataset(Dataset):
                 if args.Style:
                   instance_prompt = ""
                 else:
-                  instance_prompt = pt
+                  if random.random() < self.conditional_dropout:
+                    instance_prompt = ""
+                  else:
+                    instance_prompt = pt
             sys.stdout.write(" [0;32m" +instance_prompt[:45]+" [0m")
             sys.stdout.flush()
 
