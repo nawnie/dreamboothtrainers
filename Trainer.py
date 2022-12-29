@@ -189,6 +189,7 @@ def parse_args():
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
     parser.add_argument("--hflip", action="store_true", help="Apply horizontal flip data augmentation.")
+    parser.add_argument("--flip_rate", type=float, default=0.1, help="Apply horizontal flip data at this rate.")
     parser.add_argument("--Drop_out", type=float, default=0.01, help="Randomly Drops a caption from an image")
     parser.add_argument("--adam_beta1", type=float, default=0.9, help="The beta1 parameter for the Adam optimizer.")
     parser.add_argument("--adam_beta2", type=float, default=0.999, help="The beta2 parameter for the Adam optimizer.")
@@ -340,7 +341,8 @@ class DreamBoothDataset(Dataset):
         size=512,
         conditional_dropout=0.01,
         center_crop=False,
-        hflip=False
+        hflip=False,
+        flip_rate=0.1,
 
     ):
         self.size = size
@@ -373,7 +375,7 @@ class DreamBoothDataset(Dataset):
 
         self.image_transforms = transforms.Compose(
             [
-                transforms.RandomHorizontalFlip(0.1 * hflip),
+                transforms.RandomHorizontalFlip(flip_rate * hflip),
                 transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
                 transforms.ToTensor(),
