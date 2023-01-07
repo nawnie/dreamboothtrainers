@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import math
+import time
 import os
 import random
 import matplotlib.pyplot as plt
@@ -816,6 +817,7 @@ def main():
                   print(" [1;32mSAVING CHECKPOINT...")
                   # Create the pipeline using the trained modules and save it.
                   if accelerator.is_main_process:
+                     time.sleep(3)
                      pipeline = StableDiffusionPipeline.from_pretrained(
                            args.pretrained_model_name_or_path,
                            unet=accelerator.unwrap_model(unet),
@@ -827,10 +829,12 @@ def main():
                         subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
                         subprocess.call('cp -f '+frz_dir +'/*.* '+ save_dir+'/text_encoder', shell=True)                     
                      chkpth=args.Session_dir+"/"+inst+".ckpt"
+                     time.sleep(3)
                      if args.mixed_precision=="fp16":
                         subprocess.call('python /content/diffusers/scripts/convertosdv2.py ' + save_dir + ' ' + chkpth + ' --fp16', shell=True)
                      else:
                         subprocess.call('python /content/diffusers/scripts/convertosdv2.py ' + save_dir + ' ' + chkpth, shell=True)
+                     time.sleep(1)
                      if args.save_sample_prompt is not None:
                         pipeline = pipeline.to(accelerator.device)
                         g_cuda = torch.Generator(device=accelerator.device).manual_seed(args.seed)
